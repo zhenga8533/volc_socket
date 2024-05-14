@@ -1,27 +1,35 @@
 import socket
 import threading
+import json
 
-PORT = 8533
 SERVER = socket.gethostbyname(socket.gethostname())
+PORT = 3389
 FORMAT = 'utf-8'
 BUFFER = 64
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((SERVER, PORT))
 
+def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
+    if data['command'] == 'disconnect':
+        print(f'[DISCONNECT] {addr} disconnected.')
+        return False
+    elif data['command'] == 'test':
+        conn.send('Test command received.'.encode(FORMAT))
+        
+    return True
+
 def handle_client(conn, addr):
     print(f'[NEW CONNECTION] {addr} connected.')
 
     connected = True
     while connected:
-        msg_length = conn.recv(BUFFER).decode(FORMAT)
-        if msg_length:
-            msg_length = int(msg_length)
-            msg = conn.recv(msg_length).decode(FORMAT)
-            if msg == 'disconnect':
+        msg = conn.recv(BUFFER).decode(FORMAT)
+        if msg:
+            data = json.loads(msg)
+
+            if not handle_command(data, conn, addr):
                 connected = False
-            print(f'[{addr}] {msg}')
-            conn.send('Message received'.encode(FORMAT))
 
     conn.close()
 
@@ -32,7 +40,8 @@ def start():
         conn, addr = server.accept()
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
-        print(f'[ACTIVE CONNECTIONS] {threading.activeCount() - 1}')
+        print(f'[ACTIVE CONNECTIONS] {threading.active_count() - 1}')
 
-print('[STARTING] Attemping to start server...')
-start()
+if __name__ == '__main__':
+    print('[STARTING] Attemping to start server...')
+    start()
