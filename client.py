@@ -1,7 +1,7 @@
 import time
 import socket
 
-SERVER = '104.197.29.27'
+SERVER = 'volca.dev'
 PORT = 3389
 
 def send(client, msg):
