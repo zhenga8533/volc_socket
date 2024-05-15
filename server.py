@@ -1,7 +1,8 @@
 import socket
 import threading
 import json
-import datetime
+import time
+from commands import *
 
 # Server configuration
 SERVER = socket.gethostbyname(socket.gethostname())
@@ -22,7 +23,10 @@ def save_data(file: str, data: dict):
     with open('./db/' + file, 'w') as f:
         json.dump(data, f, indent=4)
 
-core = load_data('data.json')
+core = load_data('data.json') or {
+    'ch': [],
+    'dm': []
+}
 users = load_data('users.json')
 lock = threading.Lock()
 running = True
@@ -44,7 +48,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
     elif command == 'user':  # Track unique users
         username = data.get('username', None)
         version = data.get('version', None)
-
+        
         if username and version:
             with lock:
                 if version not in users:
@@ -52,36 +56,48 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                 if username not in users[version]:
                     users[version]["total"] += 1
 
-                users[version]["usernames"][username] = datetime.datetime.now().isoformat()
+                users[version]["usernames"][username] = time.time()
     elif command == 'ch':  # Crystal Hollows
         request = data.get('request', None)
         event = data.get('event', None)
 
         if event:
-            if request == 'post':
-                pass
-            elif request == 'get':
-                pass
+            with lock:
+                if request == 'post':
+                    core['ch'].append([event, time.time()])
+                elif request == 'get':
+                    conn.send(json.dumps(process_event(core['ch'])).encode(FORMAT))
     elif command == 'dm':  # Dwarven Mines
         request = data.get('request', None)
         event = data.get('event', None)
 
         if event:
-            if request == 'post':
-                pass
-            elif request == 'get':
-                pass
+            with lock:
+                if request == 'post':
+                    core['dm'].append([event, time.time()])
+                elif request == 'get':
+                    conn.send(json.dumps(process_event(core['dm'])).encode(FORMAT))
+    elif command == 'alloy':  # Divan's Alloy
+        player = data.get('player', None)
+
+        if player:
+            pass  # TBD
         
     return True
 
 # Client handler
 def handle_client(conn, addr):
     print(f'[NEW CONNECTION] {addr} connected.')
+    conn.settimeout(10)
 
+    global running
     connected = True
-    while connected:
-        msg = conn.recv(BUFFER).decode(FORMAT)
-        
+    while connected and running:
+        try:
+            msg = conn.recv(BUFFER).decode(FORMAT)
+        except socket.timeout:
+            break
+
         if msg:
             try:
                 data = json.loads(msg)
