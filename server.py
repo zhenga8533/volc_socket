@@ -9,7 +9,8 @@ PORT = 3389
 FORMAT = 'utf-8'
 BUFFER = 64
 
-# Data functions
+
+# Data functions and variables
 def load_data(file) -> dict:
     try:
         with open('./db/' + file, 'r') as f:
@@ -21,11 +22,15 @@ def save_data(file: str, data: dict):
     with open('./db/' + file, 'w') as f:
         json.dump(data, f, indent=4)
 
-# Data variables
 core = load_data('data.json')
 users = load_data('users.json')
 lock = threading.Lock()
 running = True
+
+def save_all():
+    print('[DB] Saving data...')
+    save_data('data.json', core)
+    save_data('users.json', users)
 
 # Command handlers
 def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
@@ -40,7 +45,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
         username = data.get('username', None)
         version = data.get('version', None)
 
-        if username:
+        if username and version:
             with lock:
                 if version not in users:
                     users[version] = {"total": 0, "usernames": {}}
@@ -49,9 +54,23 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
 
                 users[version]["usernames"][username] = datetime.datetime.now().isoformat()
     elif command == 'ch':  # Crystal Hollows
-        pass
+        request = data.get('request', None)
+        event = data.get('event', None)
+
+        if event:
+            if request == 'post':
+                pass
+            elif request == 'get':
+                pass
     elif command == 'dm':  # Dwarven Mines
-        pass
+        request = data.get('request', None)
+        event = data.get('event', None)
+
+        if event:
+            if request == 'post':
+                pass
+            elif request == 'get':
+                pass
         
     return True
 
@@ -74,22 +93,23 @@ def handle_client(conn, addr):
 
     conn.close()
 
-def handle_shutdown():
+def handle_commands():
     global running
     while running:
         command = input()
         if command == 'shutdown':
-            print('[SHUTDOWN] Initiating server shutdown...')
+            print('[COMMAND] Initiating server shutdown...')
             running = False
+        elif command == 'save':
+            save_all()
 
-    print('[SHUTDOWN] Saving data...')
-    save_data('users.json', users)
+    save_all()
 
 # Start server
 def start():
     server.listen()
     server.settimeout(10)
-    threading.Thread(target=handle_shutdown).start()
+    threading.Thread(target=handle_commands).start()
     print(f'[LISTENING] Server is listening on {SERVER}')
 
     global running
