@@ -8,9 +8,9 @@ from commands import *
 
 # Server configuration
 SERVER = socket.gethostbyname(socket.gethostname())
-PORT = os.getenv('PORT')
+PORT = int(os.getenv('PORT'))
 FORMAT = 'utf-8'
-BUFFER = 64
+BUFFER = 256
 
 # Environment variables
 API_KEY = os.getenv('API_KEY')
@@ -93,17 +93,16 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
     elif command == 'test':  # Test command
         conn.send(f'[TEST] Command Received\n'.encode(FORMAT))
     elif command == 'user':  # Track unique users
-        username = data.get('username', None)
         version = data.get('version', None)
         
-        if username and version:
+        if player and version:
             with lock:
                 if version not in users:
                     users[version] = {"total": 0, "usernames": {}}
-                if username not in users[version]["usernames"]:
+                if player not in users[version]["usernames"]:
                     users[version]["total"] += 1
 
-                users[version]["usernames"][username] = time.time()
+                users[version]["usernames"][player] = time.time()
     elif command == 'ch':  # Crystal Hollows
         request = data.get('request', None)
         event = data.get('event', None)
@@ -112,6 +111,8 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if request == 'post':
                     core['ch'].append([event, time.time()])
+                    global last_ch_powder
+
                     if time.time() - last_ch_powder > 1_200 and event == '2x Powder':
                         last_ch_powder = time.time()
                         ping = '<@&1240705901908852826>'
@@ -127,6 +128,8 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if request == 'post':
                     core['dm'].append([event, time.time()])
+                    global last_dm_powder
+
                     if time.time() - last_dm_powder > 1_200 and event == '2x Powder':
                         last_dm_powder = time.time()
                         ping = '<@&1240705811580194878>'
@@ -155,12 +158,13 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
     last_command_time = time.time()
     conn.settimeout(60)
 
+    print(f'[CONNECT] {addr} connected.')
+
     while connected and running:
         try:
             msg = conn.recv(BUFFER).decode(FORMAT)
         except socket.timeout:
             if time.time() - last_command_time > 24 * 60 * 60:
-                print(f'[DISCONNECT] {addr} disconnected due to inactivity.')
                 connected = False
 
         if msg:
@@ -172,7 +176,8 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
             if not handle_command(data, conn, addr):
                 connected = False
             last_command_time = time.time()
-
+        
+    print(f'[DISCONNECT] {addr} disconnected.')
     conn.close()
 
 def handle_commands() -> None:
@@ -201,6 +206,7 @@ def start():
     """
 
     print('[STARTING] Attemping to start server...')
+    global server
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((SERVER, PORT))
 

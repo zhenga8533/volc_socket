@@ -37,6 +37,9 @@ def process_event(data: dict, key: str) -> dict:
     # Determine averages for each event
     return_data = {'command': key, 'total': total, 'events': {}}
     for name in events:
+        if events[name]['count'] == 0:
+            continue
+
         percentage = events[name]['count'] / total * 100
         return_data['events'][name] = {
             'time': events[name]['time'] / events[name]['count'],
