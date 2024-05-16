@@ -5,6 +5,7 @@ import time
 import os
 from commands import *
 
+
 # Server configuration
 SERVER = socket.gethostbyname(socket.gethostname())
 PORT = os.getenv('PORT')
@@ -34,7 +35,11 @@ core = load_data('data.json') or {
 }
 users = load_data('users.json')
 lock = threading.Lock()
+
+# Control variables
 running = True
+last_ch_powder = 0
+last_dm_powder = 0
 
 def save_all():
     print('[DB] Saving data...')
@@ -47,6 +52,9 @@ def send_data(conn: socket.socket, data: dict):
 # Command handlers
 def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
     command = data.get('command', None)
+    player = data.get('player', None)
+    if command is None or player is None:
+        return True
 
     if command == 'disconnect':  # Disconnect command
         print(f'[DISCONNECT] {addr} disconnected.')
@@ -73,8 +81,11 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if request == 'post':
                     core['ch'].append([event, time.time()])
-                    if event == '2x Powder':
-                        send_webhook(core, 'https://discord.com/api/webhooks/1234567890')
+                    if time.time() - last_ch_powder > 1_200 and event == '2x Powder':
+                        last_ch_powder = time.time()
+                        ping = '<@&1240705901908852826>'
+                        msg = ' ⚑ The 2x Powder event starts in 20 seconds! This is a passive event! It\'s happening everywhere in the Crystal Hollows!'
+                        send_webhook(player, ping + msg, POWDER_WEBHOOK)
                 elif request == 'get':
                     send_data(conn, process_event(core, 'ch'))
     elif command == 'dm':  # Dwarven Mines
@@ -85,6 +96,11 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if request == 'post':
                     core['dm'].append([event, time.time()])
+                    if time.time() - last_dm_powder > 1_200 and event == '2x Powder':
+                        last_dm_powder = time.time()
+                        ping = '<@&1240705811580194878>'
+                        msg = ' ⚑ The 2x Powder event starts in 20 seconds! This is a passive event! It\'s happening everywhere in the Dwarven Mines!'
+                        send_webhook(player, ping + msg, POWDER_WEBHOOK)
                 elif request == 'get':
                     send_data(conn, process_event(core, 'dm'))
     elif command == 'alloy':  # Divan's Alloy
