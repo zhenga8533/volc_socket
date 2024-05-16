@@ -199,6 +199,7 @@ def start():
     """
     Start the server.
     """
+
     print('[STARTING] Attemping to start server...')
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((SERVER, PORT))
