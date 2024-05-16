@@ -13,44 +13,75 @@ FORMAT = 'utf-8'
 BUFFER = 64
 
 # Environment variables
-API_KEY = os.getenv
+API_KEY = os.getenv('API_KEY')
 POWDER_WEBHOOK = os.getenv('POWDER_WEBHOOK')
 
 
-# Data functions and variables
-def load_data(file) -> dict:
+# Data functions
+def load_data(file: str) -> dict:
+    """
+    Load data from a JSON file.
+    
+    :param file: The file to load data from.
+    """
+
     try:
         with open('./db/' + file, 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
-def save_data(file: str, data: dict):
+def save_data(file: str, data: dict) -> None:
+    """
+    Save data to a JSON file.
+
+    :param file: The file to save data to.
+    :param data: The data to save.
+    """
+
     with open('./db/' + file, 'w') as f:
         json.dump(data, f, indent=4)
 
+# Data variables
 core = load_data('data.json') or {
     'ch': [],
     'dm': []
 }
-users = load_data('users.json')
-lock = threading.Lock()
+users = load_data('users.json') or {}
 
 # Control variables
 running = True
+lock = threading.Lock()
 last_ch_powder = 0
 last_dm_powder = 0
 
-def save_all():
+def save_all() -> None:
+    """
+    Save all data to JSON files.
+    """
+
     print('[DB] Saving data...')
     save_data('data.json', core)
     save_data('users.json', users)
 
-def send_data(conn: socket.socket, data: dict):
+def send_data(conn: socket.socket, data: dict) -> None:
+    """
+    Send data to a client.
+    """
+
     conn.send((json.dumps(data) + '\n').encode(FORMAT))
 
-# Command handlers
+
+# Client handlers
 def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
+    """
+    Handle a command from a client.
+    
+    :param data: The data to handle.
+    :param conn: The client connection.
+    :param addr: The client address.
+    """
+
     command = data.get('command', None)
     player = data.get('player', None)
     if command is None or player is None:
@@ -111,14 +142,19 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
         
     return True
 
-# Client handler
-def handle_client(conn, addr):
-    print(f'[NEW CONNECTION] {addr} connected.')
-    conn.settimeout(60)
+def handle_client(conn: socket.socket, addr: tuple) -> None:
+    """
+    Handle a client connection.
+    
+    :param conn: The client connection.
+    :param addr: The client address.
+    """
 
     global running
     connected = True
     last_command_time = time.time()
+    conn.settimeout(60)
+
     while connected and running:
         try:
             msg = conn.recv(BUFFER).decode(FORMAT)
@@ -139,7 +175,11 @@ def handle_client(conn, addr):
 
     conn.close()
 
-def handle_commands():
+def handle_commands() -> None:
+    """
+    Handle server commands.
+    """
+
     global running
     while running:
         command = input()
@@ -148,11 +188,21 @@ def handle_commands():
             running = False
         elif command == 'save':
             save_all()
+        elif command == 'connections':
+            print(f'[CONNECTIONS] {threading.active_count() - 1} active connections.')
 
     save_all()
 
+
 # Start server
 def start():
+    """
+    Start the server.
+    """
+    print('[STARTING] Attemping to start server...')
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((SERVER, PORT))
+
     server.listen()
     server.settimeout(10)
     threading.Thread(target=handle_commands).start()
@@ -171,8 +221,4 @@ def start():
     server.close()
 
 if __name__ == '__main__':
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((SERVER, PORT))
-
-    print('[STARTING] Attemping to start server...')
     start()

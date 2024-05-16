@@ -1,10 +1,16 @@
 import time
-import requests
 from concurrent.futures import ThreadPoolExecutor
 from utils import *
 
 
-def process_event(data, key):
+def process_event(data: dict, key: str) -> dict:
+    """
+    Process event data and return the averages for each event.
+
+    :param data: The event data to process.
+    :param key: The key to access the event data.
+    """
+
     event_data = data.get(key, [])
     events = {}
     data_copy = event_data.copy()
@@ -39,7 +45,15 @@ def process_event(data, key):
     
     return return_data
 
-def send_webhook(player, message, url):
+def send_webhook(player: str, message: str, url: str) -> None:
+    """
+    Send a webhook message to a Discord channel.
+
+    :param player: The player's username.
+    :param message: The message to send.
+    :param url: The webhook URL to send the message to.
+    """
+
     avatar_url = get_player_head(player)
 
     payload = {
