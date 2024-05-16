@@ -2,13 +2,18 @@ import socket
 import threading
 import json
 import time
+import os
 from commands import *
 
 # Server configuration
 SERVER = socket.gethostbyname(socket.gethostname())
-PORT = 3389
+PORT = os.getenv('PORT')
 FORMAT = 'utf-8'
 BUFFER = 64
+
+# Environment variables
+API_KEY = os.getenv
+POWDER_WEBHOOK = os.getenv('POWDER_WEBHOOK')
 
 
 # Data functions and variables
@@ -36,6 +41,9 @@ def save_all():
     save_data('data.json', core)
     save_data('users.json', users)
 
+def send_data(conn: socket.socket, data: dict):
+    conn.send((json.dumps(data) + '\n').encode(FORMAT))
+
 # Command handlers
 def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
     command = data.get('command', None)
@@ -44,7 +52,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
         print(f'[DISCONNECT] {addr} disconnected.')
         return False
     elif command == 'test':  # Test command
-        conn.send(f'[ACTIVE CONNECTIONS] {threading.active_count() - 1}'.encode(FORMAT))
+        conn.send(f'[TEST] Command Received\n'.encode(FORMAT))
     elif command == 'user':  # Track unique users
         username = data.get('username', None)
         version = data.get('version', None)
@@ -53,7 +61,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if version not in users:
                     users[version] = {"total": 0, "usernames": {}}
-                if username not in users[version]:
+                if username not in users[version]["usernames"]:
                     users[version]["total"] += 1
 
                 users[version]["usernames"][username] = time.time()
@@ -65,8 +73,10 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
             with lock:
                 if request == 'post':
                     core['ch'].append([event, time.time()])
+                    if event == '2x Powder':
+                        send_webhook(core, 'https://discord.com/api/webhooks/1234567890')
                 elif request == 'get':
-                    conn.send(json.dumps(process_event(core['ch'])).encode(FORMAT))
+                    send_data(conn, process_event(core, 'ch'))
     elif command == 'dm':  # Dwarven Mines
         request = data.get('request', None)
         event = data.get('event', None)
@@ -76,7 +86,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                 if request == 'post':
                     core['dm'].append([event, time.time()])
                 elif request == 'get':
-                    conn.send(json.dumps(process_event(core['dm'])).encode(FORMAT))
+                    send_data(conn, process_event(core, 'dm'))
     elif command == 'alloy':  # Divan's Alloy
         player = data.get('player', None)
 
@@ -88,15 +98,18 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
 # Client handler
 def handle_client(conn, addr):
     print(f'[NEW CONNECTION] {addr} connected.')
-    conn.settimeout(10)
+    conn.settimeout(60)
 
     global running
     connected = True
+    last_command_time = time.time()
     while connected and running:
         try:
             msg = conn.recv(BUFFER).decode(FORMAT)
         except socket.timeout:
-            break
+            if time.time() - last_command_time > 24 * 60 * 60:
+                print(f'[DISCONNECT] {addr} disconnected due to inactivity.')
+                connected = False
 
         if msg:
             try:
@@ -106,6 +119,7 @@ def handle_client(conn, addr):
 
             if not handle_command(data, conn, addr):
                 connected = False
+            last_command_time = time.time()
 
     conn.close()
 
