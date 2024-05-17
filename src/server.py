@@ -27,10 +27,17 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
 
     while connected and running:
         try:
-            msg = conn.recv(BUFFER).decode(FORMAT)
+            msg = conn.recv(BUFFER)
+            try:
+                msg = msg.decode(FORMAT)
+            except UnicodeDecodeError:
+                connected = False
+                print(f'Invalid UTF-8 sequence received from {addr}.')
+                continue
         except socket.timeout:
             if time.time() - last_command_time > 24 * 60 * 60:
                 connected = False
+            continue
 
         if msg:
             try:
