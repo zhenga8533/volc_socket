@@ -90,7 +90,6 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
         return True
 
     if command == 'disconnect':  # Disconnect command
-        print(f'[DISCONNECT] {addr} disconnected.')
         return False
     elif command == 'test':  # Test command
         conn.send(f'[TEST] Command Received\n'.encode(FORMAT))
@@ -140,15 +139,15 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                 elif request == 'get':
                     send_data(conn, process_event(core, 'dm'))
     elif command == 'alloy':  # Divan's Alloy
-        player = data.get('player', None)
+        username = data.get('username', None)
         last_alloy = time.time() - core['alloy']
 
-        if last_alloy > 60:
+        if last_alloy > 60 and username:
             with lock:
                 if request == 'post':
                     core['alloy'] = time.time()
                     with open('./db/alloy.txt', 'a') as f:
-                        f.write(f'{player}: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}\n')
+                        f.write(f'{username}: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}\n')
                 elif request == 'get':
                     send_data(conn, {
                         'command': 'alloy',
