@@ -3,6 +3,7 @@ import threading
 import json
 import time
 import os
+from datetime import datetime
 from commands import *
 
 
@@ -45,7 +46,8 @@ def save_data(file: str, data: dict) -> None:
 # Data variables
 core = load_data('data.json') or {
     'ch': [],
-    'dm': []
+    'dm': [],
+    'alloy': 0
 }
 users = load_data('users.json') or {}
 
@@ -139,9 +141,19 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                     send_data(conn, process_event(core, 'dm'))
     elif command == 'alloy':  # Divan's Alloy
         player = data.get('player', None)
+        last_alloy = time.time() - core['alloy']
 
-        if player:
-            pass  # TBD
+        if last_alloy > 60:
+            with lock:
+                if request == 'post':
+                    core['alloy'] = time.time()
+                    with open('./db/alloy.txt', 'a') as f:
+                        f.write(f'{player}: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")}\n')
+                elif request == 'get':
+                    send_data(conn, {
+                        'command': 'alloy',
+                        'last_alloy': last_alloy
+                    })
         
     return True
 
@@ -157,7 +169,6 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
     connected = True
     last_command_time = time.time()
     conn.settimeout(60)
-
     print(f'[CONNECT] {addr} connected.')
 
     while connected and running:
@@ -177,8 +188,8 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
                 connected = False
             last_command_time = time.time()
         
-    print(f'[DISCONNECT] {addr} disconnected.')
     conn.close()
+    print(f'[DISCONNECT] {addr} disconnected.')
 
 def handle_commands() -> None:
     """
