@@ -50,6 +50,7 @@ core = load_data('data.json') or {
     'alloy': 0
 }
 users = load_data('users.json') or {}
+waifu = load_data('waifu.json') or {}
 
 # Control variables
 running = True
@@ -65,6 +66,7 @@ def save_all() -> None:
     print('[DB] Saving data...')
     save_data('data.json', core)
     save_data('users.json', users)
+    save_data('waifu.json', waifu)
 
 def send_data(conn: socket.socket, data: dict) -> None:
     """
@@ -86,6 +88,7 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
 
     command = data.get('command', None)
     player = data.get('player', None)
+    request = data.get('request', None)
     if command is None or player is None:
         return True
 
@@ -105,7 +108,6 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
 
                 users[version]["usernames"][player] = time.time()
     elif command == 'ch':  # Crystal Hollows
-        request = data.get('request', None)
         event = data.get('event', None)
 
         if event:
@@ -122,7 +124,6 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                 elif request == 'get':
                     send_data(conn, process_event(core, 'ch'))
     elif command == 'dm':  # Dwarven Mines
-        request = data.get('request', None)
         event = data.get('event', None)
 
         if event:
@@ -153,6 +154,19 @@ def handle_command(data: dict, conn: socket.socket, addr: tuple) -> bool:
                         'command': 'alloy',
                         'last_alloy': last_alloy
                     })
+    elif command == 'waifu':  # Waifu caching
+        request = data.get('request', None)
+        link = data.get('link', None)
+        imgur = data.get('imgur', None)
+        
+        with lock:
+            if request == 'post' and link and imgur:
+                waifu[link] = imgur
+            elif request == 'get' and link:
+                send_data(conn, {
+                    'command': 'waifu',
+                    'imgur': waifu.get(link, "")
+                })
         
     return True
 
