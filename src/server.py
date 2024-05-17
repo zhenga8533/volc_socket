@@ -205,7 +205,7 @@ def handle_commands() -> None:
         elif command == 'save':
             save_all()
         elif command == 'connections':
-            print(f'[CONNECTIONS] {threading.active_count() - 1} active connections.')
+            print(f'[CONNECTIONS] {threading.active_count() - 2} active connections.')
 
     save_all()
 
