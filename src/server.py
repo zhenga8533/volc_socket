@@ -38,7 +38,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
             except json.JSONDecodeError:
                 data = {}
 
-            if not handle_command(data, conn, addr):
+            if not handle_command(data, conn):
                 connected = False
             last_command_time = time.time()
         
