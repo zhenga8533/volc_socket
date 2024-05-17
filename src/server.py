@@ -2,76 +2,15 @@ import socket
 import threading
 import json
 import time
-import os
 from commands import *
-from handler import handle_command
+from constants import *
+from handler import handle_command, save_all
 
 
 # Server configuration
-SERVER = socket.gethostbyname(socket.gethostname())
-PORT = int(os.getenv('PORT'))
-FORMAT = 'utf-8'
-BUFFER = 256
 running = True
 
-# Environment variables
-API_KEY = os.getenv('API_KEY')
-POWDER_WEBHOOK = os.getenv('POWDER_WEBHOOK')
-
-
-# Data functions
-def load_data(file: str) -> dict:
-    """
-    Load data from a JSON file.
-    
-    :param file: The file to load data from.
-    """
-
-    try:
-        with open('./db/' + file, 'r') as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-def save_data(file: str, data: dict) -> None:
-    """
-    Save data to a JSON file.
-
-    :param file: The file to save data to.
-    :param data: The data to save.
-    """
-
-    with open('./db/' + file, 'w') as f:
-        json.dump(data, f, indent=4)
-
-# Data variables
-core = load_data('data.json') or {
-    'ch': [],
-    'dm': [],
-    'alloy': 0
-}
-users = load_data('users.json') or {}
-waifu = load_data('waifu.json') or {}
-
-def save_all() -> None:
-    """
-    Save all data to JSON files.
-    """
-
-    print('[DB] Saving data...')
-    save_data('data.json', core)
-    save_data('users.json', users)
-    save_data('waifu.json', waifu)
-
-def send_data(conn: socket.socket, data: dict) -> None:
-    """
-    Send data to a client.
-    """
-
-    conn.send((json.dumps(data) + '\n').encode(FORMAT))
-
-
-# Client handlers
+# Handlers
 def handle_client(conn: socket.socket, addr: tuple) -> None:
     """
     Handle a client connection.
