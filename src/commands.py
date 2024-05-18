@@ -27,7 +27,7 @@ def process_event(data: dict, key: str) -> dict:
         
         time_left = timestamp + 20 * 60 - time.time()
         if time_left < 0:
-            event_data.remove(event)
+            data[key].remove(event)
             continue
         
         events[name]['count'] += 1
