@@ -25,7 +25,7 @@ def process_event(data: dict, key: str) -> dict:
                 'time': 0
             }
         
-        time_left = timestamp + 20 * 60 - time.time()
+        time_left = timestamp - time.time()
         if time_left < 0:
             data[key].remove(event)
             continue
