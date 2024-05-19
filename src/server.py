@@ -44,7 +44,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
                 print(f'Invalid UTF-8 sequence received from {addr}.')
                 break
         except socket.timeout:
-            if time.time() - last_command_time > 3_600:
+            if time.time() - last_command_time > 43_200:
                 connected = False
             continue
 
