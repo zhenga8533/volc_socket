@@ -12,12 +12,13 @@ def process_event(data: dict, key: str) -> dict:
     """
 
     event_data = data.get(key, [])
+    parsed_data = []
     events = {}
-    data_copy = event_data.copy()
     total = 0
 
     # Add up total time for each event
-    for event in data_copy:
+    for event in event_data:
+        # Check if the event is valid
         [name, timestamp] = event
         if name not in events:
             events[name] = {
@@ -25,14 +26,18 @@ def process_event(data: dict, key: str) -> dict:
                 'time': 0
             }
         
+        # Check if the event has already ended
         time_left = timestamp - time.time()
         if time_left < 0:
-            data[key].remove(event)
             continue
         
+        # Add event to parsed data
+        parsed_data.append(event)
         events[name]['count'] += 1
         events[name]['time'] += time_left
         total += 1
+    
+    data[key] = parsed_data
     
     # Determine averages for each event
     return_data = {'command': key, 'total': total, 'events': {}}
@@ -40,6 +45,7 @@ def process_event(data: dict, key: str) -> dict:
         if events[name]['count'] == 0:
             continue
 
+        # Calculate the percentage of the event
         percentage = events[name]['count'] / total * 100
         return_data['events'][name] = {
             'time': events[name]['time'] / events[name]['count'],
