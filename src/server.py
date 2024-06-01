@@ -21,6 +21,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
 
     global running
     connected = True
+    received = False
     last_command_time = time.time()
     conn.settimeout(60)
 
@@ -44,7 +45,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
                 print(f'Invalid UTF-8 sequence received from {addr}.')
                 break
         except socket.timeout:
-            if time.time() - last_command_time > 43_200:
+            if time.time() - last_command_time > 3_600 or not received:
                 connected = False
             continue
 
@@ -54,8 +55,10 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
             except json.JSONDecodeError:
                 data = {}
 
-            if not handle_command(data, conn):
+            if data.get('command', None) == 'disconnect':
                 connected = False
+            elif handle_command(data, conn):
+                received = True
             last_command_time = time.time()
         
     conn.close()
