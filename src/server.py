@@ -47,6 +47,7 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
         except socket.timeout:
             if time.time() - last_command_time > 3_600 or not received:
                 connected = False
+                break
             continue
 
         if msg:
@@ -57,9 +58,10 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
 
             if data.get('command', None) == 'disconnect':
                 connected = False
+                break
             elif handle_command(data, conn):
                 received = True
-            last_command_time = time.time()
+                last_command_time = time.time()
         
     conn.close()
     print(f'[DISCONNECT] {addr} disconnected.')
