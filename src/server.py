@@ -26,29 +26,20 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
     conn.settimeout(60)
 
     while connected and running:
-        try:
-            # Receive data from client
-            try:
-                msg = conn.recv(BUFFER)
-            except ConnectionResetError:
-                msg = ''
-                connected = False
-                print(f'Error receiving data from {addr}.')
-                break
+        msg = None
 
-            # Check for invalid UTF-8 sequences
-            try:
-                msg = msg.decode(FORMAT)
-            except UnicodeDecodeError:
-                msg = ''
-                connected = False
-                print(f'Invalid UTF-8 sequence received from {addr}.')
-                break
+        try:
+            msg = conn.recv(BUFFER).decode(FORMAT)
         except socket.timeout:
             if time.time() - last_command_time > 3_600 or not received:
                 connected = False
                 break
             continue
+        except Exception as e:
+            print(f'Error receiving data from {addr}: {e}')
+            msg = None
+            connected = False
+            break
 
         if msg:
             try:
@@ -62,6 +53,9 @@ def handle_client(conn: socket.socket, addr: tuple) -> None:
             elif handle_command(data, conn):
                 received = True
                 last_command_time = time.time()
+        elif time.time() - last_command_time > 3_600 or not received:
+            connected = False
+            break
         
     conn.close()
     print(f'[DISCONNECT] {addr} disconnected.')
