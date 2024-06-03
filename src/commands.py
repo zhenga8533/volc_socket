@@ -1,6 +1,7 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from utils import *
+import json
 
 
 def process_event(data: dict, key: str) -> dict:
@@ -28,14 +29,11 @@ def process_event(data: dict, key: str) -> dict:
         
         # Check if the event has already ended
         time_left = timestamp - time.time()
-        if time_left < 0:
-            continue
-        
-        # Add event to parsed data
-        parsed_data.append(event)
-        events[name]['count'] += 1
-        events[name]['time'] += time_left
-        total += 1
+        if time_left > 0:
+            parsed_data.append(event)
+            events[name]['count'] += 1
+            events[name]['time'] += time_left
+            total += 1
     
     data[key] = parsed_data
     
