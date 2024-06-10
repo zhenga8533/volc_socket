@@ -1,7 +1,6 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from utils import *
-import json
 
 
 def process_event(data: dict, key: str) -> dict:
@@ -12,8 +11,8 @@ def process_event(data: dict, key: str) -> dict:
     :param key: The key to access the event data.
     """
 
-    event_data = data.get(key, [])
-    parsed_data = []
+    event_data = data.get(key, [])[:]
+    data[key].clear()
     events = {}
     total = 0
 
@@ -30,12 +29,10 @@ def process_event(data: dict, key: str) -> dict:
         # Check if the event has already ended
         time_left = timestamp - time.time()
         if time_left > 0:
-            parsed_data.append(event)
+            data[key].append(event)
             events[name]['count'] += 1
             events[name]['time'] += time_left
             total += 1
-    
-    data[key] = parsed_data
     
     # Determine averages for each event
     return_data = {'command': key, 'total': total, 'events': {}}
